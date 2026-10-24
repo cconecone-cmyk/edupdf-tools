@@ -96,47 +96,33 @@
         </div>
 
         <div>
-          <label class="block text-sm font-bold text-slate-800 mb-2">請選擇壓縮模式：</label>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <label class="block text-sm font-bold text-slate-800 mb-2">請選擇壓縮情境（兩大實用模式）：</label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <!-- 教室投影模式 -->
-            <label class="relative border-2 border-blue-500 bg-blue-50/60 p-3.5 rounded-xl cursor-pointer flex flex-col justify-between hover:bg-blue-50 transition-all shadow-sm">
+            <label class="relative border-2 border-blue-500 bg-blue-50/60 p-4 rounded-xl cursor-pointer flex flex-col justify-between hover:bg-blue-50 transition-all shadow-sm">
               <div class="flex items-start gap-2.5">
                 <input type="radio" name="quality-compress" value="projection" checked class="mt-1 text-blue-600 focus:ring-blue-500">
                 <div>
-                  <div class="font-bold text-blue-900 text-sm flex items-center gap-1">
-                    🎓 教室投影模式 <span class="bg-blue-600 text-white text-[9px] px-1.5 py-0.2 rounded-full font-bold">推薦</span>
+                  <div class="font-bold text-blue-900 text-sm flex items-center gap-1.5">
+                    🎓 教室投影模式 <span class="bg-blue-600 text-white text-[10px] px-2 py-0.2 rounded-full font-bold">最推薦</span>
                   </div>
-                  <div class="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                    150 DPI。黑板大螢幕專用，文字絕不失真，插圖放大依然清晰。<br>
-                    <span class="text-blue-700 font-semibold">⚡ 瘦身約 60%～75%</span>
+                  <div class="text-xs text-slate-600 mt-1.5 leading-relaxed">
+                    大螢幕、黑板觸控屏專用。文字公式絕不失真，插圖放大 2 倍依然無鋸齒。<br>
+                    <span class="text-blue-700 font-bold">⚡ 40MB 講義約可瘦身至 10~15MB</span>
                   </div>
                 </div>
               </div>
             </label>
 
             <!-- 手機傳閱模式 -->
-            <label class="relative border-2 border-slate-200 hover:border-slate-300 p-3.5 rounded-xl cursor-pointer flex flex-col justify-between transition-all">
+            <label class="relative border-2 border-slate-200 hover:border-slate-300 p-4 rounded-xl cursor-pointer flex flex-col justify-between transition-all">
               <div class="flex items-start gap-2.5">
                 <input type="radio" name="quality-compress" value="mobile" class="mt-1 text-blue-600 focus:ring-blue-500">
                 <div>
-                  <div class="font-bold text-slate-900 text-sm">📱 手機傳閱輕量</div>
-                  <div class="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                    96 DPI。LINE 班群或作業專用，極限超小容量，手機秒開。<br>
-                    <span class="text-emerald-700 font-semibold">⚡ 瘦身約 75%～85%</span>
-                  </div>
-                </div>
-              </div>
-            </label>
-
-            <!-- 極速無損清理 -->
-            <label class="relative border-2 border-slate-200 hover:border-slate-300 p-3.5 rounded-xl cursor-pointer flex flex-col justify-between transition-all">
-              <div class="flex items-start gap-2.5">
-                <input type="radio" name="quality-compress" value="lossless" class="mt-1 text-blue-600 focus:ring-blue-500">
-                <div>
-                  <div class="font-bold text-slate-900 text-sm">⚡ 極速無損清理</div>
-                  <div class="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                    0% 畫質損失。清理重複物件與結構壓縮，3秒完成，不耗記憶體。<br>
-                    <span class="text-amber-700 font-semibold">⚡ 瘦身約 10%～30%</span>
+                  <div class="font-bold text-slate-900 text-sm">📱 手機傳閱輕量模式</div>
+                  <div class="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                    傳送 LINE 班群或作業專用。極限超小容量，家長手機秒開。<br>
+                    <span class="text-emerald-700 font-bold">⚡ 40MB 講義約可瘦身至 5~8MB</span>
                   </div>
                 </div>
               </div>
@@ -605,9 +591,17 @@
         const originalSize = currentCompressFile.size;
         const newSize = blob.size;
         const savedPct = Math.max(0, Math.round(((originalSize - newSize) / originalSize) * 100));
+        const resultTitle = document.querySelector('#result-compress .text-lg');
 
-        document.getElementById('result-stats-compress').textContent = 
-          `原檔 ${formatBytes(originalSize)} ➔ 瘦身為 ${formatBytes(newSize)}（成功省下 ${savedPct}% 空間！）`;
+        if (savedPct > 5) {
+          resultTitle.textContent = '🎉 減肥大成功！用了超有感';
+          document.getElementById('result-stats-compress').textContent = 
+            `原檔 ${formatBytes(originalSize)} ➔ 瘦身為 ${formatBytes(newSize)}（成功省下 ${savedPct}% 空間！）`;
+        } else {
+          resultTitle.textContent = 'ℹ️ 處理完成（原檔已具備極高壓縮比）';
+          document.getElementById('result-stats-compress').textContent = 
+            `原檔 ${formatBytes(originalSize)} ➔ 產出為 ${formatBytes(newSize)}。若需大幅瘦身，請使用【教室投影模式】或【手機傳閱模式】！`;
+        }
         
         const downloadBtn = document.getElementById('download-compress');
         downloadBtn.href = downloadUrl;
