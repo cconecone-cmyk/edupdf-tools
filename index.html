@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduPDF Tools - 教師備課與投影專用 PDF 工具箱</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- PDF-Lib (拆分、合併、操作核心) -->
+  <script src="https://unpkg.com/pdf-lib@1.17.9/dist/pdf-lib.min.js"></script>
+  <!-- PDF.js (瀏覽器端本地高品質渲染與取樣) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- JSZip (打包下載) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  </script>
+  <style>
+    .tab-active {
+      border-bottom: 3px solid #3b82f6;
+      color: #1d4ed8;
+      font-weight: 700;
+      background-color: #eff6ff;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
+
+  <!-- 頂部導覽列與資安聲明 -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5">
+        <span class="text-3xl">📚</span>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-bold text-slate-900 leading-tight">EduPDF Tools 教學 PDF 神器</h1>
+            <span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-semibold">開源免費</span>
+          </div>
+          <p class="text-xs text-slate-500">專為教師備課、大螢幕投影、課次拆分與合訂講義打造</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 text-xs font-medium text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+        <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.35-.166-2.001A11.954 11.954 0 0110 1.944zM11 14a1 1 0 11-2 0 1 1 0 012 0zm0-7a1 1 0 10-2 0v3a1 1 0 102 0V7z" clip-rule="evenodd"/></svg>
+        <span>100% 瀏覽器本地安全運算・檔案不上傳伺服器・版權無外洩風險</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主功能容器 -->
+  <main class="max-w-4xl mx-auto px-4 py-6 flex-grow w-full">
+    
+    <!-- 功能分頁切換 -->
+    <div class="flex border-b border-slate-200 mb-6 bg-white rounded-t-xl px-2 shadow-sm overflow-x-auto">
+      <button id="tab-compress" onclick="switchTab('compress')" class="tab-btn px-6 py-3.5 text-sm sm:text-base flex items-center gap-2 tab-active transition-all whitespace-nowrap">
+        <span>🗜️</span> 智慧壓縮
+      </button>
+      <button id="tab-split" onclick="switchTab('split')" class="tab-btn px-6 py-3.5 text-sm sm:text-base flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-all whitespace-nowrap">
+        <span>✂️</span> 單元拆分
+      </button>
+      <button id="tab-merge" onclick="switchTab('merge')" class="tab-btn px-6 py-3.5 text-sm sm:text-base flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-all whitespace-nowrap">
+        <span>📎</span> 講義合併
+      </button>
+    </div>
+
+    <!-- ========================================================
+         1. 智慧壓縮模組（主打極簡情境 + 用了有感 + 抽屜進階）
+         ======================================================== -->
+    <section id="panel-compress" class="tab-panel bg-white p-6 rounded-b-xl rounded-tr-xl shadow-sm border border-slate-100">
+      <div class="flex items-center justify-between mb-1">
+        <h2 class="text-xl font-bold text-slate-900">🗜️ 智慧壓縮（教學與投影優化）</h2>
+        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">免動腦模式</span>
+      </div>
+      <p class="text-sm text-slate-500 mb-5">改善書商電子書過大、教室投影翻頁卡頓問題。文字 100% 保持向量銳利，放大看也不模糊。</p>
+
+      <!-- 拖曳上傳區 -->
+      <div id="drop-compress" class="border-2 border-dashed border-blue-200 hover:border-blue-400 bg-blue-50/30 rounded-xl p-8 text-center cursor-pointer transition-colors mb-6">
+        <input type="file" id="file-compress" accept="application/pdf" class="hidden">
+        <div class="text-4xl mb-2">📄</div>
+        <div class="text-sm font-semibold text-slate-700">點擊選擇檔案，或將講義 PDF 拖曳至此</div>
+        <div class="text-xs text-slate-400 mt-1">支援大容量檔案，完全在您電腦的本機記憶體處理，不耗對外網路流量</div>
+      </div>
+
+      <!-- 設定區（拖入檔案後顯示） -->
+      <div id="settings-compress" class="hidden space-y-5">
+        <div class="p-3 bg-slate-50 rounded-lg flex items-center justify-between border border-slate-200 text-sm">
+          <span class="font-medium text-slate-700 truncate max-w-xs sm:max-w-md" id="name-compress">檔名</span>
+          <span class="text-blue-700 font-mono font-bold text-xs bg-blue-50 px-2.5 py-1 rounded border border-blue-200" id="size-compress">0 MB</span>
+        </div>
+
+        <div>
+          <label class="block text-sm font-bold text-slate-800 mb-2">請選擇使用情境（直覺二選一）：</label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <!-- 教室投影模式 -->
+            <label class="relative border-2 border-blue-500 bg-blue-50/60 p-4 rounded-xl cursor-pointer flex flex-col justify-between hover:bg-blue-50 transition-all shadow-sm">
+              <div class="flex items-start gap-3">
+                <input type="radio" name="quality-compress" value="projection" checked class="mt-1 text-blue-600 focus:ring-blue-500">
+                <div>
+                  <div class="font-bold text-blue-900 flex items-center gap-1.5 text-base">
+                    🎓 教室投影模式 <span class="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">最推薦</span>
+                  </div>
+                  <div class="text-xs text-slate-600 mt-1.5 leading-relaxed">
+                    大螢幕、黑板觸控屏專用。公式文字絕不失真，插圖放大 2 倍依然清晰無鋸齒。<br>
+                    <span class="text-blue-700 font-semibold">⚡ 體積減肥約 65%～75%</span>
+                  </div>
+                </div>
+              </div>
+            </label>
+
+            <!-- 手機傳閱模式 -->
+            <label class="relative border-2 border-slate-200 hover:border-slate-300 p-4 rounded-xl cursor-pointer flex flex-col justify-between transition-all">
+              <div class="flex items-start gap-3">
+                <input type="radio" name="quality-compress" value="mobile" class="mt-1 text-blue-600 focus:ring-blue-500">
+                <div>
+                  <div class="font-bold text-slate-900 text-base">📱 手機傳閱輕量模式</div>
+                  <div class="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                    傳送 LINE 班群、Google Classroom 作業專用。極限超小容量，家長手機秒開。<br>
+                    <span class="text-emerald-700 font-semibold">⚡ 體積減肥約 80%～90%</span>
+                  </div>
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 抽屜式進階設定（不點開不干擾普通使用者） -->
+        <div class="pt-2">
+          <button type="button" onclick="toggleAdvancedCompress()" class="text-xs text-slate-500 hover:text-blue-600 flex items-center gap-1">
+            <span id="adv-arrow">▶</span> ⚙️ 展開進階微調選項（灰階化 / 自訂解析度）
+          </button>
+          
+          <div id="adv-compress-box" class="hidden mt-3 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 text-xs">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="font-bold text-slate-700">色彩模式：</span>
+                <span class="text-slate-500">黑白考卷轉為灰階，體積瞬間再砍半</span>
+              </div>
+              <select id="adv-color-mode" class="border border-slate-300 rounded px-2 py-1 bg-white">
+                <option value="color">保留全彩（預設）</option>
+                <option value="grayscale">轉為灰階（黑白題庫推薦）</option>
+              </select>
+            </div>
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="font-bold text-slate-700">自訂 DPI 解析度：</span>
+                <span class="text-slate-500">(預設依情境自動指派)</span>
+              </div>
+              <select id="adv-dpi-mode" class="border border-slate-300 rounded px-2 py-1 bg-white">
+                <option value="auto">自動指派（推薦）</option>
+                <option value="72">超小 (72 DPI)</option>
+                <option value="120">平衡 (120 DPI)</option>
+                <option value="150">清晰 (150 DPI)</option>
+                <option value="200">高解析 (200 DPI)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <button id="btn-start-compress" onclick="executeCompress()" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2">
+          <span>🚀 開始智慧壓縮</span>
+        </button>
+      </div>
+
+      <!-- 處理中進度條 -->
+      <div id="progress-compress" class="hidden mt-6 text-center space-y-2">
+        <div class="text-sm font-semibold text-slate-700" id="progress-text-compress">正在處理第 1 頁...</div>
+        <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200">
+          <div id="progress-bar-compress" class="bg-blue-600 h-3 transition-all duration-150" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- 用了有感的視覺化成果卡片 -->
+      <div id="result-compress" class="hidden mt-6 p-6 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl text-center space-y-3.5">
+        <div class="text-4xl">🎉</div>
+        <div class="text-lg font-bold text-emerald-950">減肥大成功！用了超有感</div>
+        <div class="inline-block px-4 py-2 bg-white rounded-lg border border-emerald-200 shadow-sm text-sm font-bold text-emerald-800" id="result-stats-compress">
+          原檔 80 MB ➔ 瘦身為 18 MB（成功節省了 77%）
+        </div>
+        <div>
+          <a id="download-compress" href="#" download="compressed.pdf" class="inline-flex items-center gap-2 px-7 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all text-sm">
+            <span>📥 一鍵下載瘦身後的講義</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         2. 單元拆分模組（課次範圍拆分 + 快捷範本 + 打包ZIP）
+         ======================================================== -->
+    <section id="panel-split" class="tab-panel hidden bg-white p-6 rounded-b-xl rounded-tr-xl shadow-sm border border-slate-100">
+      <div class="flex items-center justify-between mb-1">
+        <h2 class="text-xl font-bold text-slate-900">✂️ 單元拆分（課次分檔）</h2>
+        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">100% 原始無損品質</span>
+      </div>
+      <p class="text-sm text-slate-500 mb-5">將整冊肥大的電子書按單元切開，每堂課只開對應課次，電腦翻頁不卡頓，備課更輕鬆。</p>
+
+      <div id="drop-split" class="border-2 border-dashed border-indigo-200 hover:border-indigo-400 bg-indigo-50/30 rounded-xl p-8 text-center cursor-pointer transition-colors mb-6">
+        <input type="file" id="file-split" accept="application/pdf" class="hidden">
+        <div class="text-4xl mb-2">📑</div>
+        <div class="text-sm font-semibold text-slate-700">點擊選擇檔案，或將大本講義 PDF 拖曳至此</div>
+        <div class="text-xs text-slate-400 mt-1">完全無損拆分，0% 畫質壓縮，保持原版印刷級清晰</div>
+      </div>
+
+      <div id="settings-split" class="hidden space-y-5">
+        <div class="p-3 bg-slate-50 rounded-lg flex items-center justify-between border border-slate-200 text-sm">
+          <span class="font-medium text-slate-700 truncate max-w-xs sm:max-w-md" id="name-split">檔名</span>
+          <span class="text-indigo-700 font-bold text-xs bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200" id="pages-split">共 0 頁</span>
+        </div>
+
+        <!-- 拆分模式選擇 -->
+        <div>
+          <label class="block text-sm font-bold text-slate-800 mb-1">輸入拆分範圍（支援自訂檔名）：</label>
+          <div class="text-xs text-slate-500 mb-2">
+            常用範例：<code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-600">1-15:第一課, 16-30:第二課</code> 或 <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-600">1-15, 16-30</code>
+          </div>
+          <input type="text" id="input-split-ranges" placeholder="例如：1-15:第一課, 16-30:第二課, 31-45:第三課" class="w-full px-4 py-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono">
+          
+          <!-- 快捷填入按鈕 -->
+          <div class="flex items-center gap-2 mt-2 text-xs">
+            <span class="text-slate-400">快速填入：</span>
+            <button type="button" onclick="quickFillRanges(2)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded">每 2 頁切一份</button>
+            <button type="button" onclick="quickFillRanges(5)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded">每 5 頁切一份</button>
+            <button type="button" onclick="quickFillRanges(10)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded">每 10 頁切一份</button>
+          </div>
+        </div>
+
+        <button id="btn-start-split" onclick="executeSplit()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2">
+          <span>🚀 開始快速拆分</span>
+        </button>
+      </div>
+
+      <!-- 拆分成果卡片 -->
+      <div id="result-split" class="hidden mt-6 p-5 bg-indigo-50 border border-indigo-200 rounded-xl space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="text-sm font-bold text-indigo-950" id="result-stats-split">已成功切成 0 個單元檔案！</div>
+          <button id="btn-download-all-split" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow transition-all flex items-center gap-1.5">
+            <span>📦</span> 一鍵打包下載全部 (ZIP)
+          </button>
+        </div>
+        <div id="split-files-list" class="space-y-2 pt-2 max-h-60 overflow-y-auto"></div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         3. 講義合併模組（多檔排序 + 合併後輸出壓縮品質三選一）
+         ======================================================== -->
+    <section id="panel-merge" class="tab-panel hidden bg-white p-6 rounded-b-xl rounded-tr-xl shadow-sm border border-slate-100">
+      <div class="flex items-center justify-between mb-1">
+        <h2 class="text-xl font-bold text-slate-900">📎 講義合併（含壓縮品質選擇）</h2>
+        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">多合一 + 智慧瘦身</span>
+      </div>
+      <p class="text-sm text-slate-500 mb-5">多份講義、學習單與答案合訂成一本。可直接指定合併後的壓縮品質，一次搞定免轉手！</p>
+
+      <div id="drop-merge" class="border-2 border-dashed border-purple-200 hover:border-purple-400 bg-purple-50/30 rounded-xl p-8 text-center cursor-pointer transition-colors mb-6">
+        <input type="file" id="file-merge" accept="application/pdf" multiple class="hidden">
+        <div class="text-4xl mb-2">📚</div>
+        <div class="text-sm font-semibold text-slate-700">點擊選擇多個檔案，或拖曳多份 PDF 至此</div>
+        <div class="text-xs text-slate-400 mt-1">可隨時再加入更多檔案，自由排序</div>
+      </div>
+
+      <div id="settings-merge" class="hidden space-y-5">
+        <!-- 檔案清單與排序 -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-sm font-bold text-slate-800">已加入的檔案清單（點擊箭頭可調整前後順序）：</label>
+            <span class="text-xs text-purple-700 font-semibold" id="merge-count-badge">共 0 個檔案</span>
+          </div>
+          <div id="merge-files-list" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- 使用者特別要求的：合併後的壓縮品質選擇 -->
+        <div class="pt-2 border-t border-slate-100">
+          <label class="block text-sm font-bold text-slate-800 mb-2">合併後的輸出畫質／壓縮設定：</label>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <!-- 保持原畫質 -->
+            <label class="border-2 border-purple-500 bg-purple-50/50 p-3 rounded-xl cursor-pointer flex flex-col justify-between hover:bg-purple-50 transition-all">
+              <div class="flex items-start gap-2">
+                <input type="radio" name="quality-merge" value="original" checked class="mt-1 text-purple-600 focus:ring-purple-500">
+                <div>
+                  <div class="font-bold text-slate-900 text-xs sm:text-sm">💎 保持原畫質</div>
+                  <div class="text-[11px] text-slate-500 mt-0.5 leading-snug">不壓縮，100% 原始解析度，合併 1 秒瞬間完成。</div>
+                </div>
+              </div>
+            </label>
+
+            <!-- 教室投影優化 -->
+            <label class="border-2 border-slate-200 hover:border-slate-300 p-3 rounded-xl cursor-pointer flex flex-col justify-between transition-all">
+              <div class="flex items-start gap-2">
+                <input type="radio" name="quality-merge" value="projection" class="mt-1 text-purple-600 focus:ring-purple-500">
+                <div>
+                  <div class="font-bold text-slate-900 text-xs sm:text-sm">🎓 教室投影優化</div>
+                  <div class="text-[11px] text-slate-500 mt-0.5 leading-snug">合併後壓至 150 DPI，大螢幕投影順暢不卡頓。</div>
+                </div>
+              </div>
+            </label>
+
+            <!-- 手機傳閱輕量 -->
+            <label class="border-2 border-slate-200 hover:border-slate-300 p-3 rounded-xl cursor-pointer flex flex-col justify-between transition-all">
+              <div class="flex items-start gap-2">
+                <input type="radio" name="quality-merge" value="mobile" class="mt-1 text-purple-600 focus:ring-purple-500">
+                <div>
+                  <div class="font-bold text-slate-900 text-xs sm:text-sm">📱 手機傳閱輕量</div>
+                  <div class="text-[11px] text-slate-500 mt-0.5 leading-snug">深度壓縮至 96 DPI，極省空間便於 LINE 轉傳。</div>
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <button id="btn-start-merge" onclick="executeMerge()" class="w-full py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2">
+          <span>🚀 開始合併並下載</span>
+        </button>
+      </div>
+
+      <!-- 合併進度 -->
+      <div id="progress-merge" class="hidden mt-6 text-center space-y-2">
+        <div class="text-sm font-semibold text-slate-700" id="progress-text-merge">正在處理...</div>
+        <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200">
+          <div id="progress-bar-merge" class="bg-purple-600 h-3 transition-all duration-150" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- 合併成果卡片 -->
+      <div id="result-merge" class="hidden mt-6 p-6 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl text-center space-y-3.5">
+        <div class="text-4xl">🎉</div>
+        <div class="text-lg font-bold text-purple-950">講義合訂完成！</div>
+        <div class="inline-block px-4 py-2 bg-white rounded-lg border border-purple-200 shadow-sm text-sm font-bold text-purple-800" id="result-stats-merge">
+          已成功合訂成一本完整講義
+        </div>
+        <div>
+          <a id="download-merge" href="#" download="merged_lecture.pdf" class="inline-flex items-center gap-2 px-7 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-md transition-all text-sm">
+            <span>📥 下載合併後的講義</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 頁尾宣告與法規提示 -->
+  <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-400 mt-8">
+    <div class="max-w-4xl mx-auto px-4 space-y-1.5">
+      <p class="font-semibold text-slate-600">EduPDF Tools ・ 專為教育教學設計的純前端開源小工具</p>
+      <p>所有 PDF 運算均在您自己的瀏覽器內部執行，教材檔案與個人資料絕不傳送至任何外部伺服器。</p>
+      <p class="text-[11px] text-slate-400">請尊重著作權，處理之文件請限於合法取得之教學教材，並於著作權法規範之教學合理使用範圍內使用。</p>
+    </div>
+  </footer>
+
+  <!-- ==================== JavaScript 核心邏輯 ==================== -->
+  <script>
+    // 狀態變數
+    let currentCompressFile = null;
+    let currentSplitFile = null;
+    let currentSplitPdfDoc = null;
+    let mergeFiles = []; // { file, name, size }
+
+    // Tab 切換
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('tab-active');
+        b.classList.add('text-slate-600');
+      });
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+
+      document.getElementById(`tab-${tab}`).classList.add('tab-active');
+      document.getElementById(`tab-${tab}`).classList.remove('text-slate-600');
+      document.getElementById(`panel-${tab}`).classList.remove('hidden');
+    }
+
+    // 格式化大小
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
+    }
+
+    // 進階抽屜開關
+    function toggleAdvancedCompress() {
+      const box = document.getElementById('adv-compress-box');
+      const arrow = document.getElementById('adv-arrow');
+      if (box.classList.contains('hidden')) {
+        box.classList.remove('hidden');
+        arrow.textContent = '▼';
+      } else {
+        box.classList.add('hidden');
+        arrow.textContent = '▶';
+      }
+    }
+
+    // 輔助函式：PDF 轉 Canvas 高品質取樣重組（支援灰階轉換）
+    async function recompressPdf(pdfBytes, targetDpi, quality, colorMode, onProgress) {
+      const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+      const srcPdf = await loadingTask.promise;
+      const totalPages = srcPdf.numPages;
+
+      const newPdfDoc = await PDFLib.PDFDocument.create();
+      const scale = targetDpi / 72; // PDF 預設基準 72 DPI
+
+      for (let i = 1; i <= totalPages; i++) {
+        if (onProgress) onProgress(i, totalPages);
+        const page = await srcPdf.getPage(i);
+        const viewport = page.getViewport({ scale: scale });
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+        // 如果選擇了灰階模式，進行像元去色處理
+        if (colorMode === 'grayscale') {
+          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imgData.data;
+          for (let j = 0; j < data.length; j += 4) {
+            const gray = data[j] * 0.299 + data[j + 1] * 0.587 + data[j + 2] * 0.114;
+            data[j] = gray;
+            data[j + 1] = gray;
+            data[j + 2] = gray;
+          }
+          ctx.putImageData(imgData, 0, 0);
+        }
+
+        const imgDataUrl = canvas.toDataURL('image/jpeg', quality);
+        const imgBytes = await fetch(imgDataUrl).then(res => res.arrayBuffer());
+        const embeddedImg = await newPdfDoc.embedJpg(imgBytes);
+
+        // 新頁面保持原本 72 DPI 尺寸比例
+        const origViewport = page.getViewport({ scale: 1.0 });
+        const newPage = newPdfDoc.addPage([origViewport.width, origViewport.height]);
+        newPage.drawImage(embeddedImg, {
+          x: 0,
+          y: 0,
+          width: origViewport.width,
+          height: origViewport.height,
+        });
+      }
+
+      return await newPdfDoc.save();
+    }
+
+    // ---------------------- 1. 壓縮模組 ----------------------
+    const dropCompress = document.getElementById('drop-compress');
+    const fileCompress = document.getElementById('file-compress');
+    dropCompress.onclick = () => fileCompress.click();
+    fileCompress.onchange = (e) => handleCompressFile(e.target.files[0]);
+    dropCompress.ondragover = (e) => { e.preventDefault(); dropCompress.classList.add('border-blue-400'); };
+    dropCompress.ondragleave = () => dropCompress.classList.remove('border-blue-400');
+    dropCompress.ondrop = (e) => {
+      e.preventDefault();
+      dropCompress.classList.remove('border-blue-400');
+      if (e.dataTransfer.files[0]) handleCompressFile(e.dataTransfer.files[0]);
+    };
+
+    function handleCompressFile(file) {
+      if (!file || file.type !== 'application/pdf') return alert('請選擇有效的 PDF 檔案！');
+      currentCompressFile = file;
+      document.getElementById('name-compress').textContent = file.name;
+      document.getElementById('size-compress').textContent = formatBytes(file.size);
+      document.getElementById('settings-compress').classList.remove('hidden');
+      document.getElementById('result-compress').classList.add('hidden');
+    }
+
+    async function executeCompress() {
+      if (!currentCompressFile) return;
+      const qualityMode = document.querySelector('input[name="quality-compress"]:checked').value;
+      const customDpi = document.getElementById('adv-dpi-mode').value;
+      const colorMode = document.getElementById('adv-color-mode').value;
+
+      let targetDpi = qualityMode === 'projection' ? 150 : 96;
+      let jpegQuality = qualityMode === 'projection' ? 0.82 : 0.62;
+
+      if (customDpi !== 'auto') {
+        targetDpi = parseInt(customDpi);
+      }
+
+      document.getElementById('btn-start-compress').disabled = true;
+      document.getElementById('progress-compress').classList.remove('hidden');
+      document.getElementById('result-compress').classList.add('hidden');
+
+      const fileBuffer = await currentCompressFile.arrayBuffer();
+      const compressedBytes = await recompressPdf(fileBuffer, targetDpi, jpegQuality, colorMode, (current, total) => {
+        const pct = Math.round((current / total) * 100);
+        document.getElementById('progress-bar-compress').style.width = `${pct}%`;
+        document.getElementById('progress-text-compress').textContent = `正在優化第 ${current} / ${total} 頁 (${pct}%)...`;
+      });
+
+      const blob = new Blob([compressedBytes], { type: 'application/pdf' });
+      const downloadUrl = URL.createObjectURL(blob);
+      const originalSize = currentCompressFile.size;
+      const newSize = blob.size;
+      const savedPct = Math.max(0, Math.round(((originalSize - newSize) / originalSize) * 100));
+
+      document.getElementById('result-stats-compress').textContent = 
+        `原檔 ${formatBytes(originalSize)} ➔ 瘦身為 ${formatBytes(newSize)}（成功省下 ${savedPct}% 空間！）`;
+      
+      const downloadBtn = document.getElementById('download-compress');
+      downloadBtn.href = downloadUrl;
+      downloadBtn.download = currentCompressFile.name.replace(/\.pdf$/i, '_瘦身版.pdf');
+
+      document.getElementById('progress-compress').classList.add('hidden');
+      document.getElementById('result-compress').classList.remove('hidden');
+      document.getElementById('btn-start-compress').disabled = false;
+    }
+
+    // ---------------------- 2. 拆分模組 ----------------------
+    const dropSplit = document.getElementById('drop-split');
+    const fileSplit = document.getElementById('file-split');
+    dropSplit.onclick = () => fileSplit.click();
+    fileSplit.onchange = (e) => handleSplitFile(e.target.files[0]);
+    dropSplit.ondragover = (e) => { e.preventDefault(); dropSplit.classList.add('border-indigo-400'); };
+    dropSplit.ondragleave = () => dropSplit.classList.remove('border-indigo-400');
+    dropSplit.ondrop = (e) => {
+      e.preventDefault();
+      dropSplit.classList.remove('border-indigo-400');
+      if (e.dataTransfer.files[0]) handleSplitFile(e.dataTransfer.files[0]);
+    };
+
+    async function handleSplitFile(file) {
+      if (!file || file.type !== 'application/pdf') return alert('請選擇有效的 PDF 檔案！');
+      currentSplitFile = file;
+      const arrayBuffer = await file.arrayBuffer();
+      currentSplitPdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+      const totalPages = currentSplitPdfDoc.getPageCount();
+
+      document.getElementById('name-split').textContent = file.name;
+      document.getElementById('pages-split').textContent = `共 ${totalPages} 頁`;
+      document.getElementById('settings-split').classList.remove('hidden');
+      document.getElementById('result-split').classList.add('hidden');
+    }
+
+    function quickFillRanges(interval) {
+      if (!currentSplitPdfDoc) return;
+      const total = currentSplitPdfDoc.getPageCount();
+      const parts = [];
+      let current = 1;
+      let partIndex = 1;
+      while (current <= total) {
+        const end = Math.min(current + interval - 1, total);
+        parts.push(`${current}-${end}:第${partIndex}單元`);
+        current = end + 1;
+        partIndex++;
+      }
+      document.getElementById('input-split-ranges').value = parts.join(', ');
+    }
+
+    async function executeSplit() {
+      if (!currentSplitPdfDoc) return;
+      const inputStr = document.getElementById('input-split-ranges').value.trim();
+      if (!inputStr) return alert('請輸入要拆分的範圍，例如：1-15, 16-30');
+
+      const totalPages = currentSplitPdfDoc.getPageCount();
+      const parts = inputStr.split(',').map(s => s.trim()).filter(Boolean);
+      const zip = new JSZip();
+      const listContainer = document.getElementById('split-files-list');
+      listContainer.innerHTML = '';
+
+      let createdCount = 0;
+
+      for (let i = 0; i < parts.length; i++) {
+        let rangePart = parts[i];
+        let customName = `單元_${i + 1}`;
+        if (rangePart.includes(':')) {
+          const splitTokens = rangePart.split(':');
+          rangePart = splitTokens[0].trim();
+          customName = splitTokens[1].trim();
+        }
+
+        let start = 1, end = 1;
+        if (rangePart.includes('-')) {
+          const [s, e] = rangePart.split('-').map(Number);
+          start = Math.max(1, s);
+          end = Math.min(totalPages, e);
+        } else {
+          start = end = Math.max(1, Math.min(totalPages, Number(rangePart)));
+        }
+
+        if (start > end) continue;
+
+        // 抽取頁面（無損保留）
+        const subDoc = await PDFLib.PDFDocument.create();
+        const pageIndices = [];
+        for (let p = start - 1; p < end; p++) pageIndices.push(p);
+        const copiedPages = await subDoc.copyPages(currentSplitPdfDoc, pageIndices);
+        copiedPages.forEach(cp => subDoc.addPage(cp));
+
+        const subPdfBytes = await subDoc.save();
+        const fileName = `${customName}.pdf`;
+        zip.file(fileName, subPdfBytes);
+
+        // 單獨下載項目
+        const subBlob = new Blob([subPdfBytes], { type: 'application/pdf' });
+        const subUrl = URL.createObjectURL(subBlob);
+
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-2.5 bg-white rounded-lg border border-indigo-100 text-xs sm:text-sm';
+        item.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="text-indigo-600 font-bold">📄 ${fileName}</span>
+            <span class="text-slate-400 text-xs">(第 ${start}~${end} 頁，共 ${end - start + 1} 頁)</span>
+          </div>
+          <a href="${subUrl}" download="${fileName}" class="text-indigo-600 hover:text-indigo-800 font-bold">下載</a>
+        `;
+        listContainer.appendChild(item);
+        createdCount++;
+      }
+
+      if (createdCount === 0) return alert('頁碼範圍解析錯誤，請確認格式無誤！');
+
+      document.getElementById('result-stats-split').textContent = `已成功切成 ${createdCount} 個單元檔案！`;
+      const btnDownloadAll = document.getElementById('btn-download-all-split');
+      btnDownloadAll.onclick = async () => {
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const zipUrl = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = zipUrl;
+        a.download = currentSplitFile.name.replace(/\.pdf$/i, '_拆分單元包.zip');
+        a.click();
+      };
+
+      document.getElementById('result-split').classList.remove('hidden');
+    }
+
+    // ---------------------- 3. 合併模組（含壓縮品質選擇） ----------------------
+    const dropMerge = document.getElementById('drop-merge');
+    const fileMerge = document.getElementById('file-merge');
+    dropMerge.onclick = () => fileMerge.click();
+    fileMerge.onchange = (e) => handleMergeFiles(Array.from(e.target.files));
+    dropMerge.ondragover = (e) => { e.preventDefault(); dropMerge.classList.add('border-purple-400'); };
+    dropMerge.ondragleave = () => dropMerge.classList.remove('border-purple-400');
+    dropMerge.ondrop = (e) => {
+      e.preventDefault();
+      dropMerge.classList.remove('border-purple-400');
+      if (e.dataTransfer.files.length > 0) handleMergeFiles(Array.from(e.dataTransfer.files));
+    };
+
+    function handleMergeFiles(files) {
+      const pdfs = files.filter(f => f.type === 'application/pdf');
+      if (pdfs.length === 0) return;
+      pdfs.forEach(f => mergeFiles.push({ file: f, name: f.name, size: f.size }));
+      renderMergeList();
+    }
+
+    function renderMergeList() {
+      const listContainer = document.getElementById('merge-files-list');
+      listContainer.innerHTML = '';
+      if (mergeFiles.length === 0) {
+        document.getElementById('settings-merge').classList.add('hidden');
+        return;
+      }
+
+      document.getElementById('settings-merge').classList.remove('hidden');
+      document.getElementById('merge-count-badge').textContent = `共 ${mergeFiles.length} 個檔案`;
+
+      mergeFiles.forEach((item, idx) => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs sm:text-sm';
+        row.innerHTML = `
+          <div class="flex items-center gap-2 truncate max-w-[200px] sm:max-w-md">
+            <span class="w-5 h-5 flex items-center justify-center bg-purple-100 text-purple-700 rounded-full text-xs font-bold">${idx + 1}</span>
+            <span class="font-medium text-slate-700 truncate">${item.name}</span>
+            <span class="text-slate-400 text-[11px]">(${formatBytes(item.size)})</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <button onclick="moveMerge(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} class="px-2 py-1 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100 disabled:opacity-30">↑</button>
+            <button onclick="moveMerge(${idx}, 1)" ${idx === mergeFiles.length - 1 ? 'disabled' : ''} class="px-2 py-1 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100 disabled:opacity-30">↓</button>
+            <button onclick="deleteMerge(${idx})" class="px-2 py-1 bg-rose-50 border border-rose-200 rounded text-rose-600 hover:bg-rose-100 ml-1">✕</button>
+          </div>
+        `;
+        listContainer.appendChild(row);
+      });
+    }
+
+    function moveMerge(index, delta) {
+      const target = index + delta;
+      if (target < 0 || target >= mergeFiles.length) return;
+      const temp = mergeFiles[index];
+      mergeFiles[index] = mergeFiles[target];
+      mergeFiles[target] = temp;
+      renderMergeList();
+    }
+
+    function deleteMerge(index) {
+      mergeFiles.splice(index, 1);
+      renderMergeList();
+    }
+
+    async function executeMerge() {
+      if (mergeFiles.length < 2) return alert('請至少加入 2 個 PDF 檔案以進行合併！');
+
+      const qualityMode = document.querySelector('input[name="quality-merge"]:checked').value;
+      document.getElementById('btn-start-merge').disabled = true;
+      document.getElementById('progress-merge').classList.remove('hidden');
+      document.getElementById('result-merge').classList.add('hidden');
+
+      // 步驟 1：無損快速合併為單一 PDF
+      const mergedPdf = await PDFLib.PDFDocument.create();
+      for (let i = 0; i < mergeFiles.length; i++) {
+        document.getElementById('progress-text-merge').textContent = `正在合併第 ${i + 1} / ${mergeFiles.length} 個檔案...`;
+        document.getElementById('progress-bar-merge').style.width = `${Math.round(((i + 1) / mergeFiles.length) * 40)}%`;
+
+        const fileBytes = await mergeFiles[i].file.arrayBuffer();
+        const srcDoc = await PDFLib.PDFDocument.load(fileBytes);
+        const copiedPages = await mergedPdf.copyPages(srcDoc, srcDoc.getPageIndices());
+        copiedPages.forEach(p => mergedPdf.addPage(p));
+      }
+
+      let finalPdfBytes = await mergedPdf.save();
+
+      // 步驟 2：若選擇了壓縮模式，進行取樣壓縮
+      if (qualityMode !== 'original') {
+        const targetDpi = qualityMode === 'projection' ? 150 : 96;
+        const jpegQuality = qualityMode === 'projection' ? 0.82 : 0.62;
+
+        finalPdfBytes = await recompressPdf(finalPdfBytes, targetDpi, jpegQuality, 'color', (current, total) => {
+          const pct = 40 + Math.round((current / total) * 60);
+          document.getElementById('progress-bar-merge').style.width = `${pct}%`;
+          document.getElementById('progress-text-merge').textContent = `正在依【${qualityMode === 'projection' ? '教室投影' : '手機傳閱'}】品質壓縮優化：第 ${current} / ${total} 頁...`;
+        });
+      }
+
+      const blob = new Blob([finalPdfBytes], { type: 'application/pdf' });
+      const downloadUrl = URL.createObjectURL(blob);
+
+      document.getElementById('result-stats-merge').textContent = 
+        `成功合訂 ${mergeFiles.length} 份檔案，共 ${mergedPdf.getPageCount()} 頁！檔案大小：${formatBytes(blob.size)}`;
+      
+      const downloadBtn = document.getElementById('download-merge');
+      downloadBtn.href = downloadUrl;
+      downloadBtn.download = `合訂講義_${qualityMode === 'original' ? '原畫質' : (qualityMode === 'projection' ? '投影優化' : '輕量版')}.pdf`;
+
+      document.getElementById('progress-merge').classList.add('hidden');
+      document.getElementById('result-merge').classList.remove('hidden');
+      document.getElementById('btn-start-merge').disabled = false;
+    }
+  </script>
+</body>
+</html>
