@@ -7,7 +7,12 @@
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- PDF-Lib (拆分、合併、操作核心) -->
-  <script src="https://unpkg.com/pdf-lib@1.17.9/dist/pdf-lib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script>
+    if (typeof PDFLib === 'undefined') {
+      document.write('<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"><\/script>');
+    }
+  </script>
   <!-- PDF.js (瀏覽器端本地高品質渲染與取樣) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <!-- JSZip (打包下載) -->
@@ -175,9 +180,6 @@
           <span>⚠️</span> 處理遇到狀況：
         </div>
         <div id="error-compress-msg"></div>
-        <div class="mt-2 text-rose-600 text-xs">
-          💡 小撇步：若這份 PDF 頁數非常多（超過 50 頁），建議先切換到「✂️ 單元拆分」依課次切開，速度會快上 10 倍且絕不當機！
-        </div>
       </div>
 
       <!-- 處理中進度條（含多階段明確動態反饋） -->
