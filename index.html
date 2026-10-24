@@ -79,7 +79,7 @@
         <input type="file" id="file-compress" accept="application/pdf" multiple class="hidden">
         <div class="text-4xl mb-2">📄</div>
         <div class="text-sm font-semibold text-slate-700">點擊選擇檔案，或將講義 PDF 拖曳至此</div>
-        <div class="text-xs text-blue-600 font-medium mt-1">✨ 支援單檔，或一次拖入多個檔案（最多 10 個檔案）</div>
+        <div class="text-xs text-blue-600 font-medium mt-1">✨ 支援單檔，或一次拖入多個檔案（無數量上限，自動依序批次處理）</div>
       </div>
 
       <!-- 設定區（拖入檔案後顯示） -->
@@ -90,7 +90,7 @@
             <label class="text-sm font-bold text-slate-800">已選取的檔案清單：</label>
             <div class="flex items-center gap-2">
               <span class="text-xs text-blue-700 font-semibold" id="compress-count-badge">已加入 0 個檔案</span>
-              <button type="button" id="btn-add-more-compress" onclick="document.getElementById('file-compress').click()" class="text-xs text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">＋ 繼續加入</button>
+              <button type="button" id="btn-add-more-compress" onclick="document.getElementById('file-compress').click()" class="text-xs text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2.5 py-1 rounded border border-blue-200">＋ 繼續加入檔案</button>
             </div>
           </div>
           <div id="compress-files-list" class="space-y-2 max-h-56 overflow-y-auto pr-1"></div>
@@ -437,18 +437,7 @@
       const pdfs = files.filter(f => f.type === 'application/pdf');
       if (pdfs.length === 0) return alert('請選擇有效的 PDF 檔案！');
 
-      const remainingSlots = 10 - compressFiles.length;
-      if (remainingSlots <= 0) {
-        return alert('一次最多處理 10 個檔案！已達到上限。');
-      }
-
-      let toAdd = pdfs;
-      if (pdfs.length > remainingSlots) {
-        alert(`一次最多處理 10 個檔案，已為您加入前 ${remainingSlots} 個！`);
-        toAdd = pdfs.slice(0, remainingSlots);
-      }
-
-      for (const file of toAdd) {
+      for (const file of pdfs) {
         const item = {
           id: Math.random().toString(36).substr(2, 9),
           file: file,
@@ -484,7 +473,6 @@
     function renderCompressFilesList() {
       const listContainer = document.getElementById('compress-files-list');
       const badge = document.getElementById('compress-count-badge');
-      const addMoreBtn = document.getElementById('btn-add-more-compress');
       const startBtn = document.getElementById('btn-start-compress');
 
       if (!listContainer) return;
@@ -495,8 +483,7 @@
         return;
       }
 
-      badge.textContent = `已加入 ${compressFiles.length} 個檔案（最多 10 個）`;
-      addMoreBtn.style.display = compressFiles.length >= 10 ? 'none' : 'inline-block';
+      badge.textContent = `已加入 ${compressFiles.length} 個檔案（無數量限制）`;
       startBtn.innerHTML = compressFiles.length === 1 
         ? `<span>🚀 開始智慧壓縮</span>` 
         : `<span>🚀 開始批次壓縮 (${compressFiles.length} 個檔案)</span>`;
@@ -664,7 +651,7 @@
           renderCompressFilesList();
         }
 
-        if (compressCancelRequested) {
+        if (compressCancelRequested && successCount === 0) {
           throw new Error('使用者已取消批次處理。');
         }
 
@@ -672,14 +659,18 @@
         progressBar.style.width = '100%';
         progressPct.textContent = '100%';
 
-        const overallSavedPct = Math.max(0, Math.round(((totalOriginalBytes - totalCompressedBytes) / totalOriginalBytes) * 100));
+        const overallSavedPct = totalOriginalBytes > 0 
+          ? Math.max(0, Math.round(((totalOriginalBytes - totalCompressedBytes) / totalOriginalBytes) * 100))
+          : 0;
         const resultTitle = document.querySelector('#result-compress .text-lg');
         const resultStats = document.getElementById('result-stats-compress');
         const downloadSingleBtn = document.getElementById('download-compress');
         const downloadZipBtn = document.getElementById('download-zip-compress');
         const batchList = document.getElementById('batch-download-list-compress');
 
-        if (overallSavedPct > 5) {
+        if (compressCancelRequested) {
+          resultTitle.textContent = `⏹️ 已停止處理（已為您保留前 ${successCount} 個完成的檔案）`;
+        } else if (overallSavedPct > 5) {
           resultTitle.textContent = compressFiles.length === 1 ? '🎉 減肥大成功！用了超有感' : '🎉 全部批次壓縮成功！超有感瘦身';
         } else {
           resultTitle.textContent = 'ℹ️ 處理完成（原檔已具備極高壓縮比）';
